@@ -29,8 +29,6 @@ public class CollabServiceImpl extends CollabServiceImplBase {
 			@Override
 			public void onNext(Operation operation) {
 				operation = operationsManager.merge(operation);
-				System.out
-						.println(operation.getMessage() + ", " + operation.getPosition() + " : " + operation.getType());
 				for (Entry<String, StreamObserver<Operation>> entry : observers.entrySet()) {
 					String clientId = entry.getKey();
 					if (!clientId.equals(operation.getClientId())) {
@@ -45,7 +43,6 @@ public class CollabServiceImpl extends CollabServiceImplBase {
 				} else if (operation.getType() == Type.DELETE) {
 					builder.delete(operation.getPosition(), operation.getPosition() + operation.getLength());
 				}
-				System.out.println(builder.toString());
 			}
 
 			@Override
@@ -57,7 +54,6 @@ public class CollabServiceImpl extends CollabServiceImplBase {
 			public void onCompleted() {
 
 			}
-
 		};
 	}
 
