@@ -22,24 +22,28 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
-public class CollabEditorClient {
+public class CollabEditorClient implements DocumentListener {
 	Client client;
 	CollabServiceStub collabService;
 	CollabServiceBlockingStub collabServiceBlocking;
 	ClientOperationManager operationManager;
+	Document document;
+	StreamObserver<Operation> serverStream;
 
-	public CollabEditorClient() {
+	public CollabEditorClient(Document document) {
 		ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 9090).usePlaintext().build();
 		this.collabServiceBlocking = CollabServiceGrpc.newBlockingStub(channel);
 		this.collabService = CollabServiceGrpc.newStub(channel);
 		this.client = Client.newBuilder().setId(UUID.randomUUID().toString()).build();
 		this.operationManager = new ClientOperationManager(-1);
+		this.document = document;
 	}
 
-	public void run(Document document) throws BadLocationException {
+	public void run() throws BadLocationException {
 		this.client = this.collabServiceBlocking.sync(this.client);
 		operationManager.setServerState(client.getServerState());
 		document.insertString(0, client.getDocument(), null);
+		CollabEditorClient self = this;
 
 		StreamObserver<Operation> request = this.collabService.send(new StreamObserver<Operation>() {
 			@Override
@@ -47,13 +51,17 @@ public class CollabEditorClient {
 				operation = operationManager.merge(operation);
 				if (operation.getType() == Type.INSERT) {
 					try {
+						document.removeDocumentListener(self);
 						document.insertString(operation.getPosition(), operation.getMessage(), null);
+						document.addDocumentListener(self);
 					} catch (BadLocationException e) {
 
 					}
 				} else if (operation.getType() == Type.DELETE) {
 					try {
+						document.removeDocumentListener(self);
 						document.remove(operation.getPosition(), operation.getLength());
+						document.addDocumentListener(self);
 					} catch (BadLocationException e) {
 						e.printStackTrace();
 					}
@@ -71,39 +79,38 @@ public class CollabEditorClient {
 			}
 		});
 
-		document.addDocumentListener(new DocumentListener() {
+		this.serverStream = request;
+		document.addDocumentListener(this);
+	}
 
-			@Override
-			public void insertUpdate(DocumentEvent e) {
-				int position = e.getOffset();
-				int length = e.getLength();
-				try {
-					String string = document.getText(position, length);
-					Operation operation = Operation.newBuilder().setMessage(string).setType(Type.INSERT)
-							.setPosition(position).setLength(length).setClientId(client.getId()).setSequenceId(0)
-							.build();
+	@Override
+	public void insertUpdate(DocumentEvent e) {
+		int position = e.getOffset();
+		int length = e.getLength();
+		try {
+			String string = this.document.getText(position, length);
+			Operation operation = Operation.newBuilder().setMessage(string).setType(Type.INSERT).setPosition(position)
+					.setLength(length).setClientId(this.client.getId()).setSequenceId(0).build();
 
-					operation = operationManager.apply(operation);
-					request.onNext(operation);
-				} catch (BadLocationException e1) {
-					e1.printStackTrace();
-				}
-			}
+			operation = this.operationManager.apply(operation);
+			this.serverStream.onNext(operation);
+		} catch (BadLocationException e1) {
+			e1.printStackTrace();
+		}
+	}
 
-			@Override
-			public void removeUpdate(DocumentEvent e) {
-				int position = e.getOffset();
-				int length = e.getLength();
-				Operation operation = Operation.newBuilder().setMessage("").setType(Type.DELETE).setPosition(position)
-						.setLength(length).setClientId(client.getId()).setSequenceId(0).build();
-				operation = operationManager.apply(operation);
-				request.onNext(operation);
-			}
+	@Override
+	public void removeUpdate(DocumentEvent e) {
+		int position = e.getOffset();
+		int length = e.getLength();
+		Operation operation = Operation.newBuilder().setMessage("").setType(Type.DELETE).setPosition(position)
+				.setLength(length).setClientId(this.client.getId()).setSequenceId(0).build();
+		operation = this.operationManager.apply(operation);
+		this.serverStream.onNext(operation);
+	}
 
-			@Override
-			public void changedUpdate(DocumentEvent e) {
-			}
-		});
+	@Override
+	public void changedUpdate(DocumentEvent e) {
 	}
 
 	public static void main(String[] args) {
@@ -121,7 +128,7 @@ public class CollabEditorClient {
 		application.setVisible(true);
 
 		try {
-			new CollabEditorClient().run(document);
+			new CollabEditorClient(document).run();
 		} catch (BadLocationException e) {
 			e.printStackTrace();
 		}

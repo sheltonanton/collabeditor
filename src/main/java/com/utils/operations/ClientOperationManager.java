@@ -60,7 +60,7 @@ public class ClientOperationManager implements OperationsManager {
 
 	private void purgeSentOperations(Operation incomingOperation) {
 		StateSpace incomingState = incomingOperation.getState();
-		while (true) {
+		while (this.outgoing.size() > 0) {
 			Operation outgoingOperation = this.outgoing.peek().getOperation();
 			StateSpace outgoingState = outgoingOperation.getState();
 			if (outgoingState.getC() <= incomingState.getC()) {

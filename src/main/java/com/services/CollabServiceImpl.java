@@ -41,6 +41,8 @@ public class CollabServiceImpl extends CollabServiceImplBase {
 					String clientId = entry.getKey();
 					if (!clientId.equals(operation.getClientId())) {
 						StateSpace clientState = operationsManager.getClientState(clientId);
+						clientState = StateSpace.newBuilder().setC(clientState.getC()).setS(operation.getState().getS())
+								.build();
 						entry.getValue().onNext(operation.toBuilder().setState(clientState).build());
 					}
 				}
