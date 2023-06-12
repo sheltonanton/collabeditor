@@ -14,7 +14,6 @@ import com.proto.CollabEditor.Client;
 import com.proto.CollabEditor.Operation;
 import com.proto.CollabEditor.Type;
 import com.proto.CollabServiceGrpc;
-import com.proto.CollabServiceGrpc.CollabServiceBlockingStub;
 import com.proto.CollabServiceGrpc.CollabServiceStub;
 import com.utils.operations.ClientOperationManager;
 
@@ -22,17 +21,15 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
-public class CollabEditorClient implements DocumentListener {
+public class CollabEditorClient implements DocumentListener, StreamObserver<Operation> {
 	Client client;
 	CollabServiceStub collabService;
-	CollabServiceBlockingStub collabServiceBlocking;
 	ClientOperationManager operationManager;
 	Document document;
 	StreamObserver<Operation> serverStream;
 
 	public CollabEditorClient(Document document) {
 		ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 9090).usePlaintext().build();
-		this.collabServiceBlocking = CollabServiceGrpc.newBlockingStub(channel);
 		this.collabService = CollabServiceGrpc.newStub(channel);
 		this.client = Client.newBuilder().setId(UUID.randomUUID().toString()).build();
 		this.operationManager = new ClientOperationManager(-1);
@@ -40,47 +37,43 @@ public class CollabEditorClient implements DocumentListener {
 	}
 
 	public void run() throws BadLocationException {
-		this.client = this.collabServiceBlocking.sync(this.client);
-		operationManager.setServerState(client.getServerState());
-		document.insertString(0, client.getDocument(), null);
-		CollabEditorClient self = this;
+		this.collabService.sync(this.client, this);
+		StreamObserver<Operation> serverStream = this.collabService.send(null);
 
-		StreamObserver<Operation> request = this.collabService.send(new StreamObserver<Operation>() {
-			@Override
-			public void onNext(Operation operation) {
-				operation = operationManager.merge(operation);
-				if (operation.getType() == Type.INSERT) {
-					try {
-						document.removeDocumentListener(self);
-						document.insertString(operation.getPosition(), operation.getMessage(), null);
-						document.addDocumentListener(self);
-					} catch (BadLocationException e) {
-
-					}
-				} else if (operation.getType() == Type.DELETE) {
-					try {
-						document.removeDocumentListener(self);
-						document.remove(operation.getPosition(), operation.getLength());
-						document.addDocumentListener(self);
-					} catch (BadLocationException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-
-			@Override
-			public void onError(Throwable t) {
-				System.out.println(t.getMessage());
-			}
-
-			@Override
-			public void onCompleted() {
-				System.out.println("Stream Closed");
-			}
-		});
-
-		this.serverStream = request;
+		this.serverStream = serverStream;
 		document.addDocumentListener(this);
+	}
+
+	@Override
+	public void onNext(Operation operation) {
+		operation = operationManager.merge(operation);
+		if (operation.getType() == Type.INSERT) {
+			try {
+				document.removeDocumentListener(this);
+				document.insertString(operation.getPosition(), operation.getMessage(), null);
+				document.addDocumentListener(this);
+			} catch (BadLocationException e) {
+
+			}
+		} else if (operation.getType() == Type.DELETE) {
+			try {
+				document.removeDocumentListener(this);
+				document.remove(operation.getPosition(), operation.getLength());
+				document.addDocumentListener(this);
+			} catch (BadLocationException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	@Override
+	public void onError(Throwable t) {
+		System.out.println(t.getMessage());
+	}
+
+	@Override
+	public void onCompleted() {
+		System.out.println("Stream Closed");
 	}
 
 	@Override

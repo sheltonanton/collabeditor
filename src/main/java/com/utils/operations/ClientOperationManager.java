@@ -21,6 +21,11 @@ public class ClientOperationManager implements OperationsManager {
 
 	@Override
 	public Operation merge(Operation incomingOperation) {
+		if (incomingOperation.getSync()) {
+			this.server = incomingOperation.getState().getS();
+			return incomingOperation;
+		}
+
 		this.purgeSentOperations(incomingOperation);
 		incomingOperation = this.transformWithOutgoingOperations(incomingOperation);
 		this.server = this.server + 1;

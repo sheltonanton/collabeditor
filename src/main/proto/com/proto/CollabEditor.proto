@@ -20,6 +20,7 @@ message Operation {
 	int32 length = 7;
 	string client_id = 8;
 	int32 sequence_id = 9;
+	bool sync = 10;
 }
 
 message Client {
@@ -30,8 +31,8 @@ message Client {
 }
 
 service CollabService {
-	rpc send(stream Operation) returns (stream Operation);
-	rpc sync(Client) returns (Client);
+	rpc send(stream Operation) returns (Operation);
+	rpc sync(Client) returns (stream Operation);
 }
 
 service HeartBeat {

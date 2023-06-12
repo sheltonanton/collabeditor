@@ -41,10 +41,10 @@ public class ServerOperationManager implements OperationsManager {
 		return incomingOperation;
 	}
 
-	public Client syncClient(Client client) {
-		clients.put(client.getId(), StateSpace.newBuilder().setC(0).setS(this.local).build());
-		client = client.toBuilder().setServerState(this.local).setPriority(this.clients.size()).build();
-		return client;
+	public StateSpace syncClient(Client client) {
+		StateSpace clientState = StateSpace.newBuilder().setC(0).setS(this.local).build();
+		clients.put(client.getId(), clientState);
+		return clientState;
 	}
 
 	private void purgeSentOperations(Operation incomingOperation) {

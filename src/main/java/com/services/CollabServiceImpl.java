@@ -15,25 +15,19 @@ import io.grpc.stub.StreamObserver;
 public class CollabServiceImpl extends CollabServiceImplBase {
 	private LinkedHashMap<String, StreamObserver<Operation>> observers;
 	private ServerOperationManager operationsManager;
-	private LinkedHashMap<String, Integer> clientState;
 	private StringBuilder builder;
 
 	public CollabServiceImpl() {
 		this.observers = new LinkedHashMap<>();
 		this.operationsManager = new ServerOperationManager();
-		this.clientState = new LinkedHashMap<>();
 		this.builder = new StringBuilder();
 	}
 
 	@Override
-	public StreamObserver<Operation> send(StreamObserver<Operation> responseObserver) {
+	public StreamObserver<Operation> send(StreamObserver<Operation> _responseObserver) {
 		return new StreamObserver<Operation>() {
 			@Override
 			public void onNext(Operation operation) {
-				if (!observers.containsKey(operation.getClientId())) {
-					observers.put(operation.getClientId(), responseObserver);
-				}
-
 				operation = operationsManager.merge(operation);
 				System.out
 						.println(operation.getMessage() + ", " + operation.getPosition() + " : " + operation.getType());
@@ -68,12 +62,14 @@ public class CollabServiceImpl extends CollabServiceImplBase {
 	}
 
 	@Override
-	public void sync(Client client, StreamObserver<Client> responseObserver) {
-		this.clientState.put(client.getId(), 0);
-		client = client.toBuilder().setDocument(this.builder.toString()).build();
-		client = this.operationsManager.syncClient(client);
+	public void sync(Client client, StreamObserver<Operation> responseObserver) {
+		this.observers.put(client.getId(), responseObserver);
+		StateSpace clientState = this.operationsManager.syncClient(client);
 
-		responseObserver.onNext(client);
-		responseObserver.onCompleted();
+		String document = this.builder.toString();
+		int length = document.length();
+		Operation syncOperation = Operation.newBuilder().setMessage(document).setType(Type.INSERT).setPosition(0)
+				.setLength(length).setState(clientState).setClientId(client.getId()).setSync(true).build();
+		responseObserver.onNext(syncOperation);
 	}
 }
