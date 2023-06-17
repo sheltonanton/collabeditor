@@ -54,7 +54,7 @@ public class ClientOperationManager implements OperationsManager {
 		builder.setState(stateSpaceBuilder.build());
 
 		Operation outgoingOperation = builder.build();
-		this.outgoing.add(new OperationBucket(outgoingOperation));
+		this.outgoing.add(new OperationBucket(outgoingOperation, 1, 10L));
 
 		return outgoingOperation;
 	}

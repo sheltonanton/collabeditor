@@ -14,11 +14,13 @@ public class ServerOperationManager implements OperationsManager {
 	private HashMap<String, StateSpace> clients;
 	private int local;
 	private Queue<OperationBucket> outgoing;
+	private DequeOperationThread dequeThread;
 
 	public ServerOperationManager() {
 		this.local = 0;
 		this.clients = new HashMap<String, StateSpace>();
 		this.outgoing = new LinkedList<OperationBucket>();
+		this.dequeThread = new DequeOperationThread(this.outgoing);
 	}
 
 	public StateSpace getClientState(String clientId) {
