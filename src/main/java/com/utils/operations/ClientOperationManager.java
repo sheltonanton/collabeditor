@@ -28,7 +28,9 @@ public class ClientOperationManager implements OperationsManager {
 
 		this.purgeSentOperations(incomingOperation);
 		incomingOperation = this.transformWithOutgoingOperations(incomingOperation);
-		this.server = this.server + 1;
+		this.server = incomingOperation.getState().getS();
+		
+		System.out.println(incomingOperation.getClientId() + ": " + this.local + ", " + this.server);
 		return incomingOperation;
 	}
 
@@ -54,7 +56,7 @@ public class ClientOperationManager implements OperationsManager {
 		builder.setState(stateSpaceBuilder.build());
 
 		Operation outgoingOperation = builder.build();
-		this.outgoing.add(new OperationBucket(outgoingOperation, 1, 10L));
+		this.outgoing.add(new OperationBucket(outgoingOperation));
 
 		return outgoingOperation;
 	}

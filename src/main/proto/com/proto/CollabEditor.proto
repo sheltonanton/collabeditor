@@ -33,6 +33,7 @@ message Client {
 service CollabService {
 	rpc send(stream Operation) returns (Operation);
 	rpc sync(Client) returns (stream Operation);
+	rpc close(Client) returns (Client);
 }
 
 service HeartBeat {

@@ -52,7 +52,7 @@ public class CollabServiceImpl extends CollabServiceImplBase {
 
 			@Override
 			public void onCompleted() {
-
+				System.out.println("Closed a client connection");
 			}
 		};
 	}
@@ -67,5 +67,15 @@ public class CollabServiceImpl extends CollabServiceImplBase {
 		Operation syncOperation = Operation.newBuilder().setMessage(document).setType(Type.INSERT).setPosition(0)
 				.setLength(length).setState(clientState).setClientId(client.getId()).setSync(true).build();
 		responseObserver.onNext(syncOperation);
+	}
+	
+	@Override
+	public void close(Client client, StreamObserver<Client> responseObserver) {
+		this.observers.get(client.getId()).onCompleted();
+		this.observers.remove(client.getId());
+		this.operationsManager.removeClient(client);
+		
+		responseObserver.onNext(client);
+		responseObserver.onCompleted();
 	}
 }

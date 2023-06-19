@@ -1,5 +1,7 @@
 package com.client;
 
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.UUID;
 
 import javax.swing.JFrame;
@@ -14,6 +16,7 @@ import com.proto.CollabEditor.Client;
 import com.proto.CollabEditor.Operation;
 import com.proto.CollabEditor.Type;
 import com.proto.CollabServiceGrpc;
+import com.proto.CollabServiceGrpc.CollabServiceBlockingStub;
 import com.proto.CollabServiceGrpc.CollabServiceStub;
 import com.utils.operations.ClientOperationManager;
 
@@ -24,6 +27,7 @@ import io.grpc.stub.StreamObserver;
 public class CollabEditorClient implements DocumentListener, StreamObserver<Operation> {
 	Client client;
 	CollabServiceStub collabService;
+	CollabServiceBlockingStub collabBlockingService;
 	ClientOperationManager operationManager;
 	Document document;
 	StreamObserver<Operation> serverStream;
@@ -31,6 +35,7 @@ public class CollabEditorClient implements DocumentListener, StreamObserver<Oper
 	public CollabEditorClient(Document document) {
 		ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 9090).usePlaintext().build();
 		this.collabService = CollabServiceGrpc.newStub(channel);
+		this.collabBlockingService = CollabServiceGrpc.newBlockingStub(channel);
 		this.client = Client.newBuilder().setId(UUID.randomUUID().toString()).build();
 		this.operationManager = new ClientOperationManager(-1);
 		this.document = document;
@@ -73,7 +78,7 @@ public class CollabEditorClient implements DocumentListener, StreamObserver<Oper
 
 	@Override
 	public void onCompleted() {
-		System.out.println("Stream Closed");
+		System.out.println("Stream Closed: " + this.client.getId());
 	}
 
 	@Override
@@ -105,23 +110,37 @@ public class CollabEditorClient implements DocumentListener, StreamObserver<Oper
 	@Override
 	public void changedUpdate(DocumentEvent e) {
 	}
+	
+	public void windowClosing() {
+		this.collabBlockingService.close(this.client);
+		this.serverStream.onCompleted();
+	}
 
 	public static void main(String[] args) {
-		JFrame application = new JFrame("Collaborative Document Editor");
-		application.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
 		JTextArea t = new JTextArea();
 		Document document = t.getDocument();
-
+		
 		JScrollPane scrollPane = new JScrollPane(t);
 		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		
+		CollabEditorClient collabEditorClient = new CollabEditorClient(document);
+		
+		JFrame application = new JFrame("Collaborative Document Editor: " + collabEditorClient.client.getId());
+		application.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		application.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent windowEvent) {
+				collabEditorClient.windowClosing();
+			}
+		});
+		
 		application.add(scrollPane);
 		application.setSize(500, 400);
 		application.setResizable(true);
 		application.setVisible(true);
 
 		try {
-			new CollabEditorClient(document).run();
+			collabEditorClient.run();
 		} catch (BadLocationException e) {
 			e.printStackTrace();
 		}
