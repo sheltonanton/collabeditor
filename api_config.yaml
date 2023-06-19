@@ -1,0 +1,8 @@
+type: google.api.Service
+config_version: 3
+
+name: collabeditor.endpoints.collabeditor-anton.cloud.goog
+
+title: Collab Document Editor
+apis:
+- name: com.proto.CollabService
