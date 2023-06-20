@@ -110,7 +110,7 @@ public class CollabEditorClient implements DocumentListener, StreamObserver<Oper
 	@Override
 	public void changedUpdate(DocumentEvent e) {
 	}
-	
+
 	public void windowClosing() {
 		this.collabBlockingService.close(this.client);
 		this.serverStream.onCompleted();
@@ -119,12 +119,12 @@ public class CollabEditorClient implements DocumentListener, StreamObserver<Oper
 	public static void main(String[] args) {
 		JTextArea t = new JTextArea();
 		Document document = t.getDocument();
-		
+
 		JScrollPane scrollPane = new JScrollPane(t);
 		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		
+
 		CollabEditorClient collabEditorClient = new CollabEditorClient(document);
-		
+
 		JFrame application = new JFrame("Collaborative Document Editor: " + collabEditorClient.client.getId());
 		application.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		application.addWindowListener(new WindowAdapter() {
@@ -133,7 +133,7 @@ public class CollabEditorClient implements DocumentListener, StreamObserver<Oper
 				collabEditorClient.windowClosing();
 			}
 		});
-		
+
 		application.add(scrollPane);
 		application.setSize(500, 400);
 		application.setResizable(true);
