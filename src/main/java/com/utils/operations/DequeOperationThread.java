@@ -40,7 +40,6 @@ public class DequeOperationThread implements Runnable {
 			while(running && this.queue.size() == 0) {
 				try {
 					this.semaphore.acquire();
-					System.out.println("Acquired semaphore");
 				}catch(InterruptedException e) {
 					System.out.println("Interrupted Exception");
 				}
@@ -48,8 +47,7 @@ public class DequeOperationThread implements Runnable {
 			if(!running) break;
 			OperationBucket operationBucket = queue.peek();
 			operationBucket.await();
-			OperationBucket removed = queue.poll();
-			System.out.println("Removed Operation: " + removed);
+			queue.poll();
 		}
 	}
 	

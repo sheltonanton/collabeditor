@@ -29,8 +29,8 @@ public class ClientOperationManager implements OperationsManager {
 		this.purgeSentOperations(incomingOperation);
 		incomingOperation = this.transformWithOutgoingOperations(incomingOperation);
 		this.server = incomingOperation.getState().getS();
-		
-		System.out.println(incomingOperation.getClientId() + ": " + this.local + ", " + this.server);
+
+//		System.out.println(incomingOperation.getClientId() + ": " + this.local + ", " + this.server);
 		return incomingOperation;
 	}
 
